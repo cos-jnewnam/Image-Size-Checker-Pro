@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image Size Checker Pro</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="icons/icon32.png" alt="Logo" class="brand-icon" />
+      <div>
+        <h1 class="brand-title">Image Size Checker <span class="pro-badge">PRO</span></h1>
+        <p class="brand-sub" id="pageHostLabel">Scanning active tab...</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="openDemoBtn" class="icon-btn" title="Open Test Playground Page">Playground</button>
+      <button id="rescanBtn" class="icon-btn primary" title="Re-scan Page">↻ Scan</button>
+      <label class="toggle-switch" title="Enable/Disable On-Page Inspector (Alt+Shift+I)">
+        <input type="checkbox" id="enabledToggle" checked />
+        <span class="slider"></span>
+      </label>
+    </div>
+  </header>
+
+  <section class="kpi-grid">
+    <div class="kpi-card">
+      <span class="kpi-label">Total Images</span>
+      <strong class="kpi-val" id="kpiTotal">0</strong>
+      <span class="kpi-sub" id="kpiBreakdown">0 IMG · 0 BG · 0 SVG</span>
+    </div>
+    <div class="kpi-card">
+      <span class="kpi-label">Total Weight</span>
+      <strong class="kpi-val" id="kpiWeight">0 KB</strong>
+      <span class="kpi-sub" id="kpiDpr">DPR 1x</span>
+    </div>
+    <div class="kpi-card warn">
+      <span class="kpi-label">Est. Savings</span>
+      <strong class="kpi-val" id="kpiSavings">0 KB</strong>
+      <span class="kpi-sub">Original dims &amp; fmt</span>
+    </div>
+    <div class="kpi-card danger">
+      <span class="kpi-label">Too Large</span>
+      <strong class="kpi-val" id="kpiTooLarge">0</strong>
+      <span class="kpi-sub" id="kpiIssueSplit">0 critical · 0 warn</span>
+    </div>
+  </section>
+
+  <!-- Compression & Target Download Folder Bar -->
+  <section class="compression-bar">
+    <div class="folder-picker-row">
+      <div class="folder-info">
+        <span class="folder-icon">📁</span>
+        <div>
+          <div class="folder-title">Target Folder: <strong id="targetFolderLabel">Native OS Save-As Dialog</strong></div>
+          <div class="folder-sub">Keeps original filenames, formats &amp; pixel dimensions</div>
+        </div>
+      </div>
+      <div class="folder-btns">
+        <button id="chooseFolderBtn" class="icon-btn" title="Choose a persistent target folder on disk via Native OS Directory Picker">Choose Folder…</button>
+        <button id="resetFolderBtn" class="icon-btn hidden" title="Switch back to Native Save-As prompt per download">Use Save-As</button>
+      </div>
+    </div>
+    <div class="batch-compress-row">
+      <button id="compressAllZipBtn" class="compress-all-btn">
+        🗜️ Compress &amp; Download All Too Large (<span id="tooLargeCountBadge">0</span>) to ZIP
+      </button>
+      <span class="compression-status" id="compressionStatus"></span>
+    </div>
+  </section>
+
+  <section class="controls-bar">
+    <div class="filter-tabs" id="filterTabs">
+      <button class="tab active" data-filter="all">All</button>
+      <button class="tab" data-filter="toolarge">Too Large</button>
+      <button class="tab" data-filter="issues">All Issues</button>
+      <button class="tab" data-filter="aspect">Aspect Ratio</button>
+      <button class="tab" data-filter="oversized">Oversized Px</button>
+      <button class="tab" data-filter="alt">Missing Alt</button>
+    </div>
+    <div class="search-sort-row">
+      <input type="search" id="searchInput" placeholder="Filter by original filename, format, or issue..." />
+      <select id="sortSelect" title="Sort images">
+        <option value="severity">Sort: Most Issues</option>
+        <option value="size-desc">Sort: Heaviest First</option>
+        <option value="aspect-desc">Sort: Aspect Mismatch</option>
+        <option value="dom">Sort: Page Order</option>
+      </select>
+      <button id="settingsBtn" class="icon-btn" title="Configure Thresholds &amp; Overlay Mode">⚙️</button>
+    </div>
+  </section>
+
+  <section class="settings-drawer hidden" id="settingsDrawer">
+    <div class="settings-grid">
+      <label>
+        <span>On-Page Overlay Mode</span>
+        <select id="overlayModeSelect">
+          <option value="all">All Image Badges</option>
+          <option value="issues">Problematic Only</option>
+          <option value="hover">Show on Hover Only</option>
+          <option value="off">Hidden (Popup Only)</option>
+        </select>
+      </label>
+      <label>
+        <span>Max File Size Cap (KB)</span>
+        <input type="number" id="maxFileSizeInput" min="20" max="5000" step="10" value="250" />
+      </label>
+      <label>
+        <span>Aspect Ratio Tolerance (%)</span>
+        <input type="number" id="aspectToleranceInput" min="0.5" max="25" step="0.5" value="3.0" />
+      </label>
+      <label>
+        <span>Oversized Resolution Factor (×DPR)</span>
+        <input type="number" id="oversizeMultiplierInput" min="1.1" max="4.0" step="0.1" value="1.6" />
+      </label>
+    </div>
+    <div class="settings-checks">
+      <label><input type="checkbox" id="scanBgCheck" checked /> Scan CSS <code>background-image</code></label>
+      <label><input type="checkbox" id="scanSvgCheck" checked /> Scan inline <code>&lt;svg&gt;</code></label>
+      <button id="saveSettingsBtn" class="apply-btn">Apply &amp; Re-Scan</button>
+    </div>
+  </section>
+
+  <main class="items-container" id="itemsList">
+    <div class="empty-state">Scanning images on this page...</div>
+  </main>
+
+  <footer class="footer-bar">
+    <span class="shortcut-hint">Shortcut: <kbd>Alt+Shift+I</kbd></span>
+    <div class="export-btns">
+      <button id="copyMdBtn" class="footer-btn" title="Copy Markdown table for GitHub/Jira">Copy Markdown</button>
+      <button id="exportCsvBtn" class="footer-btn" title="Download CSV Report">Export CSV</button>
+      <button id="exportJsonBtn" class="footer-btn" title="Download JSON Report">Export JSON</button>
+    </div>
+  </footer>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
